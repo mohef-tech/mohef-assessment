@@ -1,0 +1,15 @@
+# Go
+apps/backend/server
+apps/backend/*.exe
+
+# Node
+node_modules/
+apps/frontend/.next/
+apps/frontend/out/
+
+# Env
+.env
+.env.local
+
+# OS
+.DS_Store
