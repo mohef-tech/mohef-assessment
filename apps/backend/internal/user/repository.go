@@ -10,6 +10,10 @@ type Repository interface {
 	Create(ctx context.Context, u *User) error
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	GetByID(ctx context.Context, id string) (*User, error)
+	List(ctx context.Context) ([]*User, error)
+	Update(ctx context.Context, id, fullName string) error
+	SetActive(ctx context.Context, id string, active bool) error
+	UpdatePasswordHash(ctx context.Context, id, hash string) error
 }
 
 type postgresRepository struct {
@@ -58,4 +62,44 @@ func (r *postgresRepository) GetByID(ctx context.Context, id string) (*User, err
 		return nil, err
 	}
 	return &u, nil
+}
+
+func (r *postgresRepository) List(ctx context.Context) ([]*User, error) {
+	query := `
+		SELECT id, email, password_hash, full_name, role, is_active, created_at, updated_at
+		FROM users ORDER BY created_at DESC
+	`
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*User
+	for rows.Next() {
+		var u User
+		if err := rows.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.FullName, &u.Role, &u.IsActive, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, &u)
+	}
+	return users, rows.Err()
+}
+
+func (r *postgresRepository) Update(ctx context.Context, id, fullName string) error {
+	query := `UPDATE users SET full_name = $1, updated_at = now() WHERE id = $2`
+	_, err := r.pool.Exec(ctx, query, fullName, id)
+	return err
+}
+
+func (r *postgresRepository) SetActive(ctx context.Context, id string, active bool) error {
+	query := `UPDATE users SET is_active = $1, updated_at = now() WHERE id = $2`
+	_, err := r.pool.Exec(ctx, query, active, id)
+	return err
+}
+
+func (r *postgresRepository) UpdatePasswordHash(ctx context.Context, id, hash string) error {
+	query := `UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2`
+	_, err := r.pool.Exec(ctx, query, hash, id)
+	return err
 }

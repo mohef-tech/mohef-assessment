@@ -24,6 +24,9 @@ func main() {
 	authService := auth.NewService(userRepo, refreshRepo, cfg.JWTSecret)
 	authHandler := auth.NewHandler(authService)
 
+	userService := user.NewService(userRepo)
+	userHandler := user.NewHandler(userService)
+
 	r := gin.Default()
 
 	r.GET("/health", func(c *gin.Context) {
@@ -39,6 +42,15 @@ func main() {
 	authGroup.POST("/login", authHandler.Login)
 	authGroup.POST("/refresh", auth.CSRFMiddleware(), authHandler.Refresh)
 	authGroup.POST("/logout", auth.CSRFMiddleware(), authHandler.Logout)
+
+	userGroup := r.Group("/users")
+	userGroup.Use(auth.RequireAuth(cfg.JWTSecret), auth.RequireRole("administrator"))
+	userGroup.GET("", userHandler.List)
+	userGroup.GET("/:id", userHandler.Get)
+	userGroup.PUT("/:id", userHandler.Update)
+	userGroup.PATCH("/:id/deactivate", userHandler.Deactivate)
+	userGroup.PATCH("/:id/activate", userHandler.Activate)
+	userGroup.POST("/:id/reset-password", userHandler.ResetPassword)
 
 	log.Printf("server running on port %s", cfg.AppPort)
 	if err := r.Run(":" + cfg.AppPort); err != nil {
