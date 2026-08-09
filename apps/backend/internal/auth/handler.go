@@ -50,11 +50,50 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := h.service.Login(c.Request.Context(), req.Email, req.Password)
+	accessToken, refreshToken, err := h.service.Login(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"access_token": token})
+	csrfToken, err := generateCSRFToken()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to issue session"})
+		return
+	}
+
+	// HttpOnly: refresh token tidak bisa diakses lewat JS (mitigasi XSS)
+	c.SetCookie("refresh_token", refreshToken, int(RefreshTokenTTL.Seconds()), "/auth", "", false, true)
+	// csrf_token sengaja TIDAK HttpOnly — frontend baca ini, kirim balik di header X-CSRF-Token
+	c.SetCookie("csrf_token", csrfToken, int(RefreshTokenTTL.Seconds()), "/", "", false, false)
+
+	c.JSON(http.StatusOK, gin.H{"access_token": accessToken})
+}
+
+func (h *Handler) Refresh(c *gin.Context) {
+	rawToken, err := c.Cookie("refresh_token")
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "refresh token missing"})
+		return
+	}
+
+	accessToken, err := h.service.Refresh(c.Request.Context(), rawToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"access_token": accessToken})
+}
+
+func (h *Handler) Logout(c *gin.Context) {
+	rawToken, err := c.Cookie("refresh_token")
+	if err == nil {
+		_ = h.service.Logout(c.Request.Context(), rawToken)
+	}
+
+	c.SetCookie("refresh_token", "", -1, "/auth", "", false, true)
+	c.SetCookie("csrf_token", "", -1, "/", "", false, false)
+
+	c.JSON(http.StatusOK, gin.H{"message": "logged out"})
 }

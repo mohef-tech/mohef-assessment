@@ -20,7 +20,8 @@ func main() {
 	defer pool.Close()
 
 	userRepo := user.NewPostgresRepository(pool)
-	authService := auth.NewService(userRepo, cfg.JWTSecret)
+	refreshRepo := auth.NewRefreshTokenRepository(pool)
+	authService := auth.NewService(userRepo, refreshRepo, cfg.JWTSecret)
 	authHandler := auth.NewHandler(authService)
 
 	r := gin.Default()
@@ -36,6 +37,8 @@ func main() {
 	authGroup := r.Group("/auth")
 	authGroup.POST("/register", authHandler.Register)
 	authGroup.POST("/login", authHandler.Login)
+	authGroup.POST("/refresh", auth.CSRFMiddleware(), authHandler.Refresh)
+	authGroup.POST("/logout", auth.CSRFMiddleware(), authHandler.Logout)
 
 	log.Printf("server running on port %s", cfg.AppPort)
 	if err := r.Run(":" + cfg.AppPort); err != nil {
