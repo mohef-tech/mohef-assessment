@@ -9,6 +9,7 @@ import (
 	"github.com/mohef-tech/mohef-assessment/backend/internal/auth"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/config"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/database"
+	"github.com/mohef-tech/mohef-assessment/backend/internal/question"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/user"
 )
 
@@ -29,13 +30,17 @@ func main() {
 	userService := user.NewService(userRepo)
 	userHandler := user.NewHandler(userService)
 
+	questionRepo := question.NewRepository(pool)
+	questionService := question.NewService(questionRepo)
+	questionHandler := question.NewHandler(questionService)
+
 	r := gin.Default()
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-CSRF-Token"},
-		AllowCredentials: true, // wajib true karena kita pakai cookie
+		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
 
@@ -61,6 +66,17 @@ func main() {
 	userGroup.PATCH("/:id/deactivate", userHandler.Deactivate)
 	userGroup.PATCH("/:id/activate", userHandler.Activate)
 	userGroup.POST("/:id/reset-password", userHandler.ResetPassword)
+
+	qGroup := r.Group("/")
+	qGroup.Use(auth.RequireAuth(cfg.JWTSecret), auth.RequireRole("administrator", "operator"))
+	qGroup.POST("/question-banks", questionHandler.CreateBank)
+	qGroup.GET("/question-banks", questionHandler.ListBanks)
+	qGroup.POST("/question-banks/:bankId/questions", questionHandler.CreateQuestion)
+	qGroup.GET("/question-banks/:bankId/questions", questionHandler.ListQuestions)
+	qGroup.GET("/questions/:id", questionHandler.GetQuestion)
+	qGroup.PUT("/questions/:id", questionHandler.UpdateQuestion)
+	qGroup.GET("/questions/:id/versions", questionHandler.ListVersionHistory)
+	qGroup.DELETE("/questions/:id", questionHandler.DeleteQuestion)
 
 	log.Printf("server running on port %s", cfg.AppPort)
 	if err := r.Run(":" + cfg.AppPort); err != nil {
