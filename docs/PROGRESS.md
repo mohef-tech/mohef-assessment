@@ -9,7 +9,7 @@
 
 ## Backend — Belum (urutan lanjutan)
 
-1. Question Bank & Question Management — CRUD soal + versioning
+1. Question Bank & Question Management — CRUD soal + versioning✅
 2. Participant Management — CRUD peserta + import
 3. Assessment Management — buat assessment, jadwal, passing grade, publish
 4. Assessment Session — start, jawab, autosave, randomization, submit
@@ -21,10 +21,10 @@
 ## Frontend (Next.js) — Rencana begitu pindah
 
 1. Setup project: `create-next-app` + TypeScript + Tailwind, struktur `apps/frontend` ✅
-2. Auth flow: halaman Login, simpan access token (in-memory/state — bukan localStorage), handle refresh otomatis
-3. Layout dasar: proteksi route (redirect ke login kalau belum auth), baca role dari token buat guard halaman admin
-4. Dashboard admin: list user (`GET /users`), form update/deactivate/reset password — konsumsi endpoint yang sudah ada
-5. Setelah dashboard admin jalan, gantian balik ke backend untuk modul berikutnya (Question Bank), lalu bikin UI-nya menyusul
+2. Auth flow: halaman Login, simpan access token (in-memory/state — bukan localStorage), handle refresh otomatis✅
+3. Layout dasar: proteksi route (redirect ke login kalau belum auth), baca role dari token buat guard halaman admin✅
+4. Dashboard admin: list user (`GET /users`), form update/deactivate/reset password — konsumsi endpoint yang sudah ada✅
+5. Setelah dashboard admin jalan, gantian balik ke backend untuk modul berikutnya (Question Bank), lalu bikin UI-nya menyusul ->
 
 ## Catatan
 
