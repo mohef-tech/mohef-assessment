@@ -9,6 +9,7 @@ import (
 	"github.com/mohef-tech/mohef-assessment/backend/internal/auth"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/config"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/database"
+	"github.com/mohef-tech/mohef-assessment/backend/internal/participant"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/question"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/user"
 )
@@ -33,6 +34,10 @@ func main() {
 	questionRepo := question.NewRepository(pool)
 	questionService := question.NewService(questionRepo)
 	questionHandler := question.NewHandler(questionService)
+
+	participantRepo := participant.NewRepository(pool)
+	participantService := participant.NewService(participantRepo)
+	participantHandler := participant.NewHandler(participantService)
 
 	r := gin.Default()
 
@@ -77,6 +82,16 @@ func main() {
 	qGroup.PUT("/questions/:id", questionHandler.UpdateQuestion)
 	qGroup.GET("/questions/:id/versions", questionHandler.ListVersionHistory)
 	qGroup.DELETE("/questions/:id", questionHandler.DeleteQuestion)
+
+	pGroup := r.Group("/participants")
+	pGroup.Use(auth.RequireAuth(cfg.JWTSecret), auth.RequireRole("administrator", "operator"))
+	pGroup.POST("", participantHandler.Create)
+	pGroup.GET("", participantHandler.List)
+	pGroup.GET("/:id", participantHandler.Get)
+	pGroup.PUT("/:id", participantHandler.Update)
+	pGroup.PATCH("/:id/deactivate", participantHandler.Deactivate)
+	pGroup.PATCH("/:id/activate", participantHandler.Activate)
+	pGroup.POST("/import", participantHandler.Import)
 
 	log.Printf("server running on port %s", cfg.AppPort)
 	if err := r.Run(":" + cfg.AppPort); err != nil {
