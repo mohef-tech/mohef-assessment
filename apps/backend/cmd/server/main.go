@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/mohef-tech/mohef-assessment/backend/internal/assessment"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/auth"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/config"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/database"
@@ -38,6 +39,10 @@ func main() {
 	participantRepo := participant.NewRepository(pool)
 	participantService := participant.NewService(participantRepo)
 	participantHandler := participant.NewHandler(participantService)
+
+	assessmentRepo := assessment.NewRepository(pool)
+	assessmentService := assessment.NewService(assessmentRepo)
+	assessmentHandler := assessment.NewHandler(assessmentService)
 
 	r := gin.Default()
 
@@ -92,6 +97,16 @@ func main() {
 	pGroup.PATCH("/:id/deactivate", participantHandler.Deactivate)
 	pGroup.PATCH("/:id/activate", participantHandler.Activate)
 	pGroup.POST("/import", participantHandler.Import)
+
+	aGroup := r.Group("/assessments")
+	aGroup.Use(auth.RequireAuth(cfg.JWTSecret), auth.RequireRole("administrator", "operator"))
+	aGroup.POST("", assessmentHandler.Create)
+	aGroup.GET("", assessmentHandler.List)
+	aGroup.GET("/:id", assessmentHandler.Get)
+	aGroup.PUT("/:id", assessmentHandler.Update)
+	aGroup.POST("/:id/participants", assessmentHandler.AddParticipants)
+	aGroup.GET("/:id/participants", assessmentHandler.ListParticipants)
+	aGroup.POST("/:id/publish", auth.RequireRole("administrator"), assessmentHandler.Publish)
 
 	log.Printf("server running on port %s", cfg.AppPort)
 	if err := r.Run(":" + cfg.AppPort); err != nil {
