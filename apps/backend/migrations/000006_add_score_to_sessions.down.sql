@@ -1,0 +1,1 @@
+ALTER TABLE assessment_sessions DROP COLUMN score, DROP COLUMN passed;

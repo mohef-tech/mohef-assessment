@@ -12,6 +12,7 @@ import (
 	"github.com/mohef-tech/mohef-assessment/backend/internal/database"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/participant"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/question"
+	"github.com/mohef-tech/mohef-assessment/backend/internal/session"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/user"
 )
 
@@ -43,6 +44,10 @@ func main() {
 	assessmentRepo := assessment.NewRepository(pool)
 	assessmentService := assessment.NewService(assessmentRepo)
 	assessmentHandler := assessment.NewHandler(assessmentService)
+
+	sessionRepo := session.NewRepository(pool)
+	sessionService := session.NewService(sessionRepo)
+	sessionHandler := session.NewHandler(sessionService)
 
 	r := gin.Default()
 
@@ -107,6 +112,13 @@ func main() {
 	aGroup.POST("/:id/participants", assessmentHandler.AddParticipants)
 	aGroup.GET("/:id/participants", assessmentHandler.ListParticipants)
 	aGroup.POST("/:id/publish", auth.RequireRole("administrator"), assessmentHandler.Publish)
+
+	sessionGroup := r.Group("/")
+	sessionGroup.Use(auth.RequireAuth(cfg.JWTSecret), auth.RequireRole("peserta"))
+	sessionGroup.POST("/assessments/:id/sessions/start", sessionHandler.Start)
+	sessionGroup.GET("/sessions/:sessionId/questions", sessionHandler.GetQuestions)
+	sessionGroup.PUT("/sessions/:sessionId/answers/:questionId", sessionHandler.SaveAnswer)
+	sessionGroup.POST("/sessions/:sessionId/submit", sessionHandler.Submit)
 
 	log.Printf("server running on port %s", cfg.AppPort)
 	if err := r.Run(":" + cfg.AppPort); err != nil {
