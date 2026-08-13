@@ -12,6 +12,7 @@ import (
 	"github.com/mohef-tech/mohef-assessment/backend/internal/database"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/participant"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/question"
+	"github.com/mohef-tech/mohef-assessment/backend/internal/reporting"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/session"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/user"
 )
@@ -48,6 +49,10 @@ func main() {
 	sessionRepo := session.NewRepository(pool)
 	sessionService := session.NewService(sessionRepo)
 	sessionHandler := session.NewHandler(sessionService)
+
+	reportingRepo := reporting.NewRepository(pool)
+	reportingService := reporting.NewService(reportingRepo)
+	reportingHandler := reporting.NewHandler(reportingService)
 
 	r := gin.Default()
 
@@ -112,6 +117,7 @@ func main() {
 	aGroup.POST("/:id/participants", assessmentHandler.AddParticipants)
 	aGroup.GET("/:id/participants", assessmentHandler.ListParticipants)
 	aGroup.POST("/:id/publish", auth.RequireRole("administrator"), assessmentHandler.Publish)
+	aGroup.GET("/:id/report", reportingHandler.GetReport)
 
 	sessionGroup := r.Group("/")
 	sessionGroup.Use(auth.RequireAuth(cfg.JWTSecret), auth.RequireRole("peserta"))
