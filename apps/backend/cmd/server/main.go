@@ -7,6 +7,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/assessment"
+	"github.com/mohef-tech/mohef-assessment/backend/internal/audit"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/auth"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/config"
 	"github.com/mohef-tech/mohef-assessment/backend/internal/database"
@@ -54,6 +55,9 @@ func main() {
 	reportingService := reporting.NewService(reportingRepo)
 	reportingHandler := reporting.NewHandler(reportingService)
 
+	auditRepo := audit.NewRepository(pool)
+	auditHandler := audit.NewHandler(auditRepo)
+
 	r := gin.Default()
 
 	r.Use(cors.New(cors.Config{
@@ -63,6 +67,8 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+
+	r.Use(audit.Middleware(auditRepo))
 
 	r.GET("/health", func(c *gin.Context) {
 		if err := pool.Ping(c.Request.Context()); err != nil {
@@ -125,6 +131,10 @@ func main() {
 	sessionGroup.GET("/sessions/:sessionId/questions", sessionHandler.GetQuestions)
 	sessionGroup.PUT("/sessions/:sessionId/answers/:questionId", sessionHandler.SaveAnswer)
 	sessionGroup.POST("/sessions/:sessionId/submit", sessionHandler.Submit)
+
+	auditGroup := r.Group("/audit-logs")
+	auditGroup.Use(auth.RequireAuth(cfg.JWTSecret), auth.RequireRole("administrator"))
+	auditGroup.GET("", auditHandler.List)
 
 	log.Printf("server running on port %s", cfg.AppPort)
 	if err := r.Run(":" + cfg.AppPort); err != nil {
