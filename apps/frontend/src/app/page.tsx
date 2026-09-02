@@ -1,42 +1,32 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useAuth } from "@/context/AuthContext";
 
-function HomeContent() {
-  const { user, logout } = useAuth();
+function RedirectContent() {
+  const { user } = useAuth();
   const router = useRouter();
 
-  async function handleLogout() {
-    await logout();
-    router.replace("/login");
-  }
+  useEffect(() => {
+    if (user?.role === "administrator" || user?.role === "operator") {
+      router.replace("/admin/users");
+    }
+    // role "peserta" belum ada landing page-nya — nanti diarahkan ke sini juga
+  }, [user, router]);
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4">
-      <h1 className="text-2xl font-semibold">Mohef Assessment</h1>
-      <p>Login sebagai: {user?.role}</p>
-      {user?.role === "administrator" && (
-        <Link href="/admin" className="text-blue-600 underline">
-          Ke Admin Dashboard
-        </Link>
-      )}
-      <button
-        onClick={handleLogout}
-        className="rounded bg-black px-4 py-2 text-white"
-      >
-        Logout
-      </button>
-    </div>
+    <p className="p-6" style={{ color: "#8A8D97" }}>
+      Mengarahkan...
+    </p>
   );
 }
 
 export default function Home() {
   return (
     <RequireAuth>
-      <HomeContent />
+      <RedirectContent />
     </RequireAuth>
   );
 }
