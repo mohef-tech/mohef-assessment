@@ -7,6 +7,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"io"
+	"regexp"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
@@ -110,6 +111,11 @@ func (s *Service) ImportCSV(ctx context.Context, r io.Reader) ([]ImportResult, e
 		email := strings.TrimSpace(record[emailIdx])
 		fullName := strings.TrimSpace(record[nameIdx])
 
+		if !isValidEmail(email) {
+			results = append(results, ImportResult{Row: rowNum, Email: email, Success: false, Error: "format email tidak valid"})
+			continue
+		}
+
 		p, password, err := s.Create(ctx, email, fullName)
 		if err != nil {
 			results = append(results, ImportResult{Row: rowNum, Email: email, Success: false, Error: err.Error()})
@@ -119,4 +125,10 @@ func (s *Service) ImportCSV(ctx context.Context, r io.Reader) ([]ImportResult, e
 	}
 
 	return results, nil
+}
+
+var emailRegex = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
+
+func isValidEmail(email string) bool {
+	return emailRegex.MatchString(email)
 }
